@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -195,6 +195,78 @@ app.post('/api/newsletter', (req, res) => {
     success: true,
     message: `Thank you, ${firstName}! You have joined our Wellness Community successfully. Keep an eye out for healthy Nigerian meal tips!`
   });
+});
+
+// AI Meme Generator suggestion route
+app.post('/api/meme/suggest', async (req, res) => {
+  const { image, mimeType, templateContext } = req.body;
+
+  // Fallback mode if no API key is specified
+  if (!ai) {
+    console.log('Gemini API is offline, providing funny healthy food fallbacks.');
+    const fallbacks = [
+      "When the EatRight Fisherman Soup has more crabs than your ex's excuses.",
+      "Me explaining to my gym instructor why smoky Jollof Rice is technically a complex carb.",
+      "Emi Membere looking at deep-fried pastry snacks like: 'Stop right there!'",
+      "That face you make when the organic oat swallow matches the native soup perfectly.",
+      "Port Harcourt traffic can keep me waiting, but don't delay my EatRight delivery box!"
+    ];
+    return res.json({ captions: fallbacks });
+  }
+
+  try {
+    const parts: any[] = [];
+    
+    if (image && mimeType) {
+      // Clean up base64 prefix if present
+      const cleanedBase64 = image.replace(/^data:image\/\w+;base64,/, "");
+      parts.push({
+        inlineData: {
+          mimeType: mimeType,
+          data: cleanedBase64
+        }
+      });
+    }
+
+    const basePrompt = `Analyze this image (or the template context: "${templateContext || 'Healthy and traditional eating vibes'}") and suggest exactly 5 witty, highly humorous, and clever memes captions. The captions must focus on healthy eating struggles, wellness vs. junk food dilemmas, traditional premium Nigerian foods (like Jollof, fisherman soup, egusi, bitter leaf, yam porridge), or navigating local schedules in Port Harcourt. Keep each caption concise, punchy, and under 15 words so they fit perfectly as overlays. Return them as a JSON block with the property "captions".`;
+    
+    parts.push({ text: basePrompt });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: parts,
+      config: {
+        temperature: 0.9,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            captions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          },
+          required: ["captions"]
+        }
+      }
+    });
+
+    const bodyText = response.text || '{}';
+    const parsed = JSON.parse(bodyText.trim());
+    const captions = parsed.captions || [];
+    
+    return res.json({ captions: captions.slice(0, 5) });
+  } catch (err: any) {
+    console.error('Error suggesting meme captions via Gemini:', err);
+    const emergencyCaptions = [
+      "When EatRight delivers the Jollof and the smoky aroma fills the room.",
+      "Dieting inside Port Harcourt but the hot fisherman soup keeps calling your name.",
+      "No artificial seasonings, just premium ingredients and pure joy.",
+      "Me calculating if local plantain porridge counts as healthy greens.",
+      "My phone waiting for EatRight's WhatsApp delivery rider notification."
+    ];
+    return res.json({ captions: emergencyCaptions });
+  }
 });
 
 // Serve frontend assets in production
