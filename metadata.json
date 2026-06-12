@@ -1,0 +1,6 @@
+{
+  "name": "EatRight Foods",
+  "description": "Nourishing Healthier Lives Through Better Nigerian Food. Discover healthy Nigerian restaurant meals, corporate/event catering, meal subscriptions, and talk with our AI Nutrition Assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
